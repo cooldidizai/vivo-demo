@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vivo_抖音拆解底表</title>
+    <style>
+        :root {
+            --primary-color: #7b69ee; 
+            --primary-light: #f0f0ff;
+            --border-color: #e1e4e8;
+            --text-main: #333;
+            --text-sub: #666;
+            
+            /* 冻结列宽度 */
+            --w-col1: 120px; /* 机型 */
+            --w-col2: 100px; /* 阶段 */
+            --w-col3: 130px; /* 节点 */
+            --w-col4: 100px; /* 时间 */
+            
+            /* 颜色配置 */
+            --bg-header-base: #f7f8fa;
+            --bg-header-data: #eef2ff;
+            --bg-header-inter: #fff7e6;
+            --bg-summary: #fff2cc; /* 合计行黄色 */
+
+            /* 组合筛选器颜色 */
+            --complex-checkbox-red: #f5222d;
+            --complex-button-blue: #1890ff;
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; }
+
+        body { margin: 0; padding: 15px; background: #f4f5f7; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* --- 筛选器样式 --- */
+        .filter-container {
+            background: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .filter-item { position: relative; display: flex; align-items: center; gap: 8px; }
+        .filter-label { font-weight: 600; color: var(--text-sub); white-space: nowrap; }
+
+        .trigger-btn {
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 120px;
+            max-width: 200px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            user-select: none;
+        }
+        .trigger-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .trigger-btn::after { content: "▼"; font-size: 10px; color: #bbb; margin-left: 8px; flex-shrink: 0; }
+
+        .dropdown-panel {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border-radius: 6px;
+            padding: 0;
+            display: none;
+            z-index: 1000;
+            margin-top: 6px;
+            min-width: 240px;
+            flex-direction: column;
+        }
+        .dropdown-panel.show { display: flex; }
+
+        .panel-header { padding: 10px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; background: #fafafa; border-radius: 6px 6px 0 0; }
+        .panel-body { padding: 10px; max-height: 300px; overflow-y: auto; }
+        .panel-footer { padding: 10px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+        .checkbox-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .checkbox-grid.cols-3 { grid-template-columns: repeat(3, 1fr); width: 500px; }
+        
+        .checkbox-item { display: flex; align-items: center; cursor: pointer; font-size: 13px; }
+        .checkbox-item input { margin-right: 6px; accent-color: var(--primary-color); }
+
+        .btn { padding: 4px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #dcdcdc; background: #fff; font-size: 12px; }
+        .btn-primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .btn-link { border: none; background: none; color: var(--primary-color); padding: 0; cursor: pointer; }
+
+        /* --- 组合筛选器样式 (复刻截图) --- */
+        .complex-filter-panel { width: 450px; padding: 20px; } 
+        .complex-section { margin-bottom: 20px; }
+        .complex-section-title { font-weight: bold; color: #333; margin-bottom: 10px; }
+
+        /* 自定义红色勾选框 */
+        .custom-checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px 15px; 
+        }
+        .custom-checkbox-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            color: #333;
+        }
+        .custom-checkbox-item input[type="checkbox"] {
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            width: 16px; height: 16px;
+            border: 1px solid #ccc; border-radius: 2px;
+            margin-right: 6px;
+            display: inline-block; vertical-align: middle; position: relative;
+            background-color: #fff;
+            transition: all 0.2s ease;
+        }
+        .custom-checkbox-item input[type="checkbox"]:checked {
+            border-color: var(--complex-checkbox-red);
+            background-color: var(--complex-checkbox-red);
+        }
+        .custom-checkbox-item input[type="checkbox"]:checked::after {
+            content: ''; position: absolute; left: 4px; top: 1px;
+            width: 5px; height: 9px;
+            border: solid #fff; border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        /* 关键词输入框 */
+        .keyword-input-group { margin-top: 15px; }
+        .keyword-input-group label { display: block; margin-bottom: 5px; color: #666; }
+        .keyword-input { width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; outline: none; background: #f9f9f9; }
+        .keyword-input:focus { border-color: var(--complex-button-blue); background: #fff; }
+
+        .complex-footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .complex-footer .remember-checkbox { display: flex; align-items: center; color: #999; }
+        .complex-footer .btn-group { display: flex; gap: 8px; }
+        .complex-footer .btn { font-size: 13px; padding: 6px 15px; } 
+        .complex-footer .btn-cancel { border-color: #dcdcdc; color: #333; } 
+        .complex-footer .btn-confirm { background: var(--complex-button-blue); color: #fff; border-color: var(--complex-button-blue); } 
+
+
+        /* --- 时间范围控件 --- */
+        .time-wrapper { display: flex; align-items: center; border: 1px solid #d9d9d9; border-radius: 4px; padding: 2px; margin-left: auto; }
+        .time-type-btn { padding: 4px 8px; cursor: pointer; border-radius: 2px; font-size: 12px; color: #666; }
+        .time-type-btn.active { background: var(--primary-color); color: #fff; }
+        .date-range-box { display: flex; align-items: center; margin-left: 8px; gap: 5px; }
+        .time-input { border: none; outline: none; padding: 4px; color: #333; font-family: inherit; width: 120px; border-radius: 2px; cursor: pointer;}
+        .time-input:focus { border-color: var(--primary-color); }
+
+        /* --- 表格样式 --- */
+        .table-wrapper { flex: 1; background: #fff; border-radius: 8px; overflow: auto; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+        
+        th, td { padding: 0 10px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 32px; white-space: nowrap; text-align: right; }
+        td:nth-child(1), td:nth-child(2), td:nth-child(3) { text-align: left; }
+        td:nth-child(4) { text-align: center; }
+
+        /* 表头 */
+        thead th { position: sticky; top: 0; z-index: 10; background: var(--bg-header-base); color: #444; font-weight: 600; text-align: center; vertical-align: middle; height: 38px; }
+
+        /* 冻结列 */
+        .sticky-col { position: sticky; background: #fff; z-index: 2; }
+        th.sticky-col { z-index: 20; background: var(--bg-header-base); }
+
+        .col-model { left: 0; width: var(--w-col1); border-right: 2px solid #e1e4e8; }
+        .col-stage { left: var(--w-col1); width: var(--w-col2); }
+        .col-node  { left: calc(var(--w-col1) + var(--w-col2)); width: var(--w-col3); }
+        .col-date  { left: calc(var(--w-col1) + var(--w-col2) + var(--w-col3)); width: var(--w-col4); border-right: 2px solid #ccc; box-shadow: 2px 0 5px rgba(0,0,0,0.05); }
+
+        /* 列颜色 */
+        .th-data { background-color: var(--bg-header-data) !important; color: #1e3a8a; }
+        .th-inter { background-color: var(--bg-header-inter) !important; color: #9a3412; }
+
+        /* 合计行样式 (黄色) */
+        tr.summary-row td {
+            background-color: var(--bg-summary) !important;
+            font-weight: bold;
+            color: #d35400;
+            border-bottom: 2px solid #ddd;
+        }
+        /* 确保冻结列在合计行也是黄色的 */
+        tr.summary-row .sticky-col {
+            background-color: var(--bg-summary) !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="filter-container">
+        
+        <!-- 品牌 -->
+        <div class="filter-item">
+            <span class="filter-label">品牌</span>
+            <select id="brandSelect" class="trigger-btn" style="min-width:80px; padding:6px;" onchange="handleBrandChange()">
+                <option value="all">全部</option>
+                <option value="vivo">vivo</option>
+                <option value="OPPO">OPPO</option>
+            </select>
+        </div>
+
+        <!-- 机型 -->
+        <div class="filter-item">
+            <span class="filter-label">机型</span>
+            <div id="modelTrigger" class="trigger-btn" onclick="toggleDropdown('modelDrop')">已选 3 项</div>
+            <div id="modelDrop" class="dropdown-panel">
+                <div class="panel-header">
+                    <span>选择机型</span>
+                    <button class="btn-link" onclick="toggleAll('model', true)">全选</button>
+                </div>
+                <div id="modelList" class="panel-body checkbox-grid">
+                    <!-- JS动态生成 -->
+                </div>
+                <div class="panel-footer">
+                    <button class="btn" onclick="toggleDropdown('modelDrop')">取消</button>
+                    <button class="btn btn-primary" onclick="confirmFilter('model')">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 阶段 -->
+        <div class="filter-item">
+            <span class="filter-label">阶段</span>
+            <div id="stageTrigger" class="trigger-btn" onclick="toggleDropdown('stageDrop')">全部</div>
+            <div id="stageDrop" class="dropdown-panel">
+                <div class="panel-header">
+                    <span>选择阶段</span>
+                    <button class="btn-link" onclick="toggleAll('stage', true)">全选</button>
+                </div>
+                <div id="stageList" class="panel-body checkbox-grid">
+                    <!-- JS动态生成 -->
+                </div>
+                <div class="panel-footer">
+                    <button class="btn" onclick="toggleDropdown('stageDrop')">取消</button>
+                    <button class="btn btn-primary" onclick="confirmStage()">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 节点 -->
+        <div class="filter-item">
+            <span class="filter-label">节点</span>
+            <div id="nodeTrigger" class="trigger-btn" onclick="toggleDropdown('nodeDrop')">全部</div>
+            <div id="nodeDrop" class="dropdown-panel">
+                <div class="panel-header">
+                    <span>选择节点</span>
+                    <div>
+                        <button class="btn-link" onclick="toggleAll('node', true)">全选</button>
+                        <button class="btn-link" style="margin-left:8px; color:#999;" onclick="toggleAll('node', false)">清空</button>
+                    </div>
+                </div>
+                <div id="nodeList" class="panel-body checkbox-grid cols-3">
+                    <!-- JS动态生成 -->
+                </div>
+                <div class="panel-footer">
+                    <button class="btn" onclick="toggleDropdown('nodeDrop')">取消</button>
+                    <button class="btn btn-primary" onclick="confirmFilter('node')">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 组合筛选 (高级) -->
+        <div class="filter-item">
+            <span class="filter-label">发声主体</span>
+            <div id="complexTrigger" class="trigger-btn" style="border-color:var(--primary-color); color:var(--primary-color);" onclick="toggleDropdown('complexDrop')">
+                全部
+            </div>
+            
+            <div id="complexDrop" class="dropdown-panel complex-filter-panel">
+                <!-- 发声类型 -->
+                <div class="complex-section">
+                    <div class="complex-section-title">发声主体</div>
+                    <div id="voiceTypeContainer" class="custom-checkbox-grid">
+                        <!-- JS动态生成 -->
+                    </div>
+                </div>
+
+
+                <div class="complex-footer">
+                    <label class="remember-checkbox">
+                        <input type="checkbox" style="margin-right:5px;"> 记住
+                    </label>
+                    <div class="btn-group">
+                        <button class="btn btn-cancel" onclick="toggleDropdown('complexDrop')">取消</button>
+                        <button class="btn btn-confirm" onclick="confirmComplex()">确定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 时间范围 (区间选择) -->
+        <div class="time-wrapper">
+            <div id="btnDay" class="time-type-btn active" onclick="switchTimeMode('day')">按天</div>
+            <div id="btnMonth" class="time-type-btn" onclick="switchTimeMode('month')">按月</div>
+            
+            <div class="date-range-box">
+                <input type="date" id="dateStart" class="time-input" onchange="renderTable()">
+                <span style="color:#999">-</span>
+                <input type="date" id="dateEnd" class="time-input" onchange="renderTable()">
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                <tr id="tableHeaderRow"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // --- 1. 数据解析 ---
+        const RAW_DATA_TEXT = `OPPO Reno13系列	2-正式预热期	2-正式预热第1天	2024/11/17	600	0	11	33	151	405	32	7	1	44,981	0	13,649	3,679	2,945	24,708
+OPPO Reno13系列	2-正式预热期	2-正式预热第2天	2024/11/18	14,593	0	107	161	3,127	11,198	392	83	22	4,524,921	0	4,161,479	121,814	73,376	168,252
+OPPO Reno13系列	2-正式预热期	2-正式预热第3天	2024/11/19	17,649	0	78	159	2,996	14,416	273	48	10	1,435,726	0	1,205,415	32,379	47,473	150,459
+OPPO Reno13系列	2-正式预热期	2-正式预热第4天	2024/11/20	21,381	0	119	279	3,388	17,595	347	54	13	2,934,067	0	2,398,589	274,762	47,694	213,022
+OPPO Reno13系列	2-正式预热期	2-正式预热第5天	2024/11/21	26,122	0	129	289	3,300	22,404	426	55	8	973,474	0	515,936	65,172	44,518	347,848
+OPPO Reno13系列	2-正式预热期	2-正式预热第6天	2024/11/22	32,091	0	135	325	3,821	27,810	432	48	2	650,477	0	154,852	102,816	75,705	317,104
+OPPO Reno13系列	2-正式预热期	2-正式预热第7天	2024/11/23	37,702	0	81	285	3,771	33,565	445	50	9	1,829,669	0	1,386,529	22,178	66,015	354,947
+OPPO Reno13系列	2-正式预热期	2-正式预热第8天	2024/11/24	26,808	0	75	227	3,098	23,408	337	51	13	1,812,429	0	1,396,255	65,902	77,201	273,071
+OPPO Reno13系列	3-发布会	3-发布会	2024/11/25	57,050	0	568	1,931	4,345	50,206	1,406	195	49	10,872,567	0	9,183,701	239,079	92,515	1,357,272
+OPPO Reno13系列	4-预售期	4-预售第1天	2024/11/26	42,090	1	230	1,169	3,563	37,127	777	81	14	4,399,847	5,586	3,471,651	148,168	240,742	533,700
+OPPO Reno13系列	4-预售期	4-预售第2天	2024/11/27	38,175	0	182	1,012	3,460	33,521	730	69	7	1,211,948	0	520,025	111,467	61,726	518,730
+OPPO Reno13系列	4-预售期	4-预售第3天	2024/11/28	31,826	1	149	847	3,733	27,096	596	60	11	2,209,532	0	1,631,580	98,208	64,265	415,479
+OPPO Reno13系列	5-首销月	5-首销第1天	2024/11/29	28,880	0	132	745	3,346	24,657	587	67	13	2,768,641	0	2,088,451	189,361	63,167	427,662
+OPPO Reno13系列	5-首销月	5-首销第2天	2024/11/30	29,455	0	77	519	2,615	26,244	496	44	5	921,367	0	122,289	87,139	55,285	656,654
+OPPO Reno13系列	5-首销月	5-首销第3天	2024/12/01	34,077	0	70	438	2,323	31,246	504	27	2	529,043	0	65,502	38,679	34,854	390,008
+OPPO Reno13系列	5-首销月	5-首销第4天	2024/12/02	24,078	1	91	509	2,310	21,167	471	41	2	597,090	1,654	91,351	47,804	36,600	419,681
+OPPO Reno13系列	5-首销月	5-首销第5天	2024/12/03	24,376	0	90	544	2,145	21,597	532	54	2	733,250	0	222,489	52,646	43,908	414,207
+OPPO Reno13系列	5-首销月	5-首销第6天	2024/12/04	24,067	1	63	468	2,283	21,252	477	29	2	673,774	312	250,919	40,756	49,017	332,770
+OPPO Reno13系列	5-首销月	5-首销第7天	2024/12/05	21,476	0	63	314	2,289	18,810	389	32	3	501,805	0	113,037	38,871	47,169	302,728
+vivo S30系列	0-超长预热期	0-超长预热第4天	2025/05/01	24	0	0	2	6	16	3	0	0	1,553	0	0	1,216	197	140
+vivo S30系列	0-超长预热期	0-超长预热第5天	2025/05/02	22	0	0	1	12	9	1	0	0	497	0	0	326	75	96
+vivo S30系列	0-超长预热期	0-超长预热第6天	2025/05/03	17	0	0	0	8	9	0	0	0	140	0	0	0	91	49
+vivo S30系列	0-超长预热期	0-超长预热第7天	2025/05/04	22	0	0	0	6	16	1	0	0	817	0	0	0	546	271
+vivo S30系列	0-超长预热期	0-超长预热第8天	2025/05/05	22	0	1	3	8	10	4	0	0	2,521	0	1,217	607	594	103
+vivo S30系列	0-超长预热期	0-超长预热第9天	2025/05/06	25	0	0	4	5	16	1	0	0	797	0	0	492	101	204
+vivo S30系列	0-超长预热期	0-超长预热第10天	2025/05/07	20	0	0	2	9	9	1	0	0	566	0	0	123	247	196
+vivo S30系列	1-外围预热期	1-外围预热第1天	2025/05/08	52	0	1	5	13	33	7	0	0	4,478	0	26	829	842	2,781
+vivo S30系列	1-外围预热期	1-外围预热第2天	2025/05/09	371	0	1	6	182	182	2	0	0	3,441	0	303	591	1,173	1,374
+vivo S30系列	1-外围预热期	1-外围预热第3天	2025/05/10	323	0	2	4	177	140	5	0	0	3,162	0	333	249	1,434	1,146
+vivo S30系列	1-外围预热期	1-外围预热第4天	2025/05/11	202	0	1	4	97	100	5	0	0	4,310	0	22	781	1,336	2,171
+vivo S30系列	2-正式预热期	2-正式预热第1天	2025/05/19	5,571	4	3	18	2,864	2,682	41	7	2	176,206	79,266	495	2,611	53,331	40,503
+vivo S30系列	3-发布会	3-发布会	2025/05/29	9,994	19	132	89	4,963	4,791	237	114	25	1,974,115	10,947	1,720,769	15,751	182,847	43,801
+vivo S50系列	0-超长预热期	0-超长预热第1天	2025/11/14	90	0	18	1	46	25	16	15	1	79,812	0	78,477	59	261	1,015
+vivo S50系列	1-外围预热期	1-外围预热第1天	2025/11/27	1,148	0	21	5	668	454	32	16	5	175,156	0	136,236	169	32,459	6,292
+vivo S50系列	2-正式预热期	2-正式预热第1天	2025/12/08	17,461	16	143	111	8,659	8,532	265	117	24	1,549,890	144,110	1,163,296	8,168	157,330	76,986
+vivo S50系列	3-发布会	3-发布会	2025/12/15	15,042	38	175	181	7,237	7,411	370	105	14	1,366,020	75,911	931,061	18,135	127,886	213,027`;
+
+        function parseData(text) {
+            const lines = text.trim().split('\n');
+            return lines.map(line => {
+                const cols = line.split('\t');
+                const nums = cols.slice(4).map(n => parseFloat(n.replace(/,/g, '')));
+                return {
+                    model: cols[0],
+                    stage: cols[1],
+                    node: cols[2],
+                    date: cols[3], // Format: YYYY/MM/DD
+                    nums: nums, // Array of numbers
+                    content: `内容关键词示例 ${cols[0]} ${cols[2]}`, // Mock content for keyword filtering
+                };
+            });
+        }
+
+        const MOCK_DATA = parseData(RAW_DATA_TEXT);
+
+        // --- 2. 映射关系与配置 ---
+        const STAGE_NODE_MAP = {
+            '超长预热期': Array.from({length:13}, (_,i)=>`0-超长预热第${i+1}天`),
+            '外围预热期': Array.from({length:11}, (_,i)=>`1-外围预热第${i+1}天`),
+            '正式预热期': Array.from({length:8}, (_,i)=>`2-正式预热第${i+1}天`), 
+            '发布会': ['3-发布会'],
+            '预售期': Array.from({length:3}, (_,i)=>`4-预售第${i+1}天`), 
+            '首销月': Array.from({length:7}, (_,i)=>`5-首销第${i+1}天`) 
+        };
+        const ALL_STAGES = Object.keys(STAGE_NODE_MAP);
+        const ALL_NODES = Object.values(STAGE_NODE_MAP).flat();
+        
+        const BRANDS = {
+            'all': ['OPPO Reno13系列', 'vivo S50系列', 'vivo S30系列'], 
+            'vivo': ['vivo S50系列', 'vivo S30系列'],
+            'OPPO': ['OPPO Reno13系列']
+        };
+
+        const VOICE_TYPES = ['全部', 'OGC', 'KOL', 'KOC', 'KOS', 'UGC'];
+
+        const COLUMN_DEFS = [
+            { id: 'model', name: '机型', fixed: true, cls: 'col-model' },
+            { id: 'stage', name: '阶段', fixed: true, cls: 'col-stage' },
+            { id: 'node', name: '节点', fixed: true, cls: 'col-node' },
+            { id: 'date', name: '发表时间', fixed: true, cls: 'col-date' },
+            // Data indices start at 0 relative to nums array
+            { name: '抖音-主贴量', type: 'base', cls: 'th-data' }, // index 0
+            { name: '抖音-OGC', type: 'OGC', cls: 'th-data' }, // index 1
+            { name: '抖音-KOL', type: 'KOL', cls: 'th-data' }, // index 2
+            { name: '抖音-KOC', type: 'KOC', cls: 'th-data' }, // index 3
+            { name: '抖音-KOS', type: 'KOS', cls: 'th-data' }, // index 4
+            { name: '抖音-UGC', type: 'UGC', cls: 'th-data' }, // index 5
+            { name: '抖音-百赞', type: 'base', cls: 'th-data' }, // index 6
+            { name: '抖音-千赞', type: 'base', cls: 'th-data' }, // index 7
+            { name: '抖音-万赞', type: 'base', cls: 'th-data' }, // index 8
+            { name: '抖音-总互动量', type: 'base', cls: 'th-inter' }, // index 9
+            { name: '互动量-OGC', type: 'OGC', cls: 'th-inter' }, // index 10
+            { name: '互动量-KOL', type: 'KOL', cls: 'th-inter' }, // index 11
+            { name: '互动量-KOC', type: 'KOC', cls: 'th-inter' }, // index 12
+            { name: '互动量-KOS', type: 'KOS', cls: 'th-inter' }, // index 13
+            { name: '互动量-UGC', type: 'UGC', cls: 'th-inter' } // index 14
+        ];
+        const DATA_COL_START_INDEX = 4; // Index in COLUMN_DEFS where data columns start
+
+        let state = {
+            brand: 'all',
+            models: BRANDS['all'],
+            stages: [...ALL_STAGES],
+            nodes: [...ALL_NODES],
+            voiceTypes: ['全部'],
+            contentInclude: '',
+            contentExclude: '',
+            timeMode: 'day',
+            startDate: '2024-11-01',
+            endDate: '2025-12-31'
+        };
+
+        // --- 3. 初始化 ---
+        function init() {
+            handleBrandChange(); // Populates models
+            renderCheckboxGrid('stageList', ALL_STAGES, 'stage', true);
+            renderCheckboxGrid('nodeList', ALL_NODES, 'node', true);
+            renderVoiceTypes();
+            
+            document.getElementById('dateStart').value = state.startDate;
+            document.getElementById('dateEnd').value = state.endDate;
+
+            // Apply all filters initially
+            confirmFilter('model');
+            confirmStage(); 
+            confirmFilter('node');
+            confirmComplex(); 
+
+            // Click outside to close dropdowns
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.filter-item') && !e.target.closest('.dropdown-panel')) {
+                    document.querySelectorAll('.dropdown-panel').forEach(p => p.classList.remove('show'));
+                }
+            });
+        }
+
+        // --- 4. 筛选器逻辑 ---
+        
+        function handleBrandChange() {
+            state.brand = document.getElementById('brandSelect').value;
+            const models = BRANDS[state.brand];
+            renderCheckboxGrid('modelList', models, 'model');
+            toggleAll('model', true); 
+            confirmFilter('model');
+        }
+
+        // Generic checkbox grid renderer
+        function renderCheckboxGrid(containerId, items, type, initialCheckAll = false) {
+            const container = document.getElementById(containerId);
+            let html = '';
+            items.forEach(item => {
+                const isChecked = initialCheckAll || (state[`${type}s`] && state[`${type}s`].includes(item));
+                html += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="cb_${type}" value="${item}" ${isChecked ? 'checked' : ''}>
+                        ${item}
+                    </label>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // Renderer for voice types (custom checkboxes)
+        function renderVoiceTypes() {
+            const container = document.getElementById('voiceTypeContainer');
+            let html = '';
+            VOICE_TYPES.forEach(type => {
+                const isChecked = state.voiceTypes.includes(type);
+                html += `
+                    <label class="custom-checkbox-item">
+                        <input type="checkbox" name="cb_voiceType" value="${type}" ${isChecked ? 'checked' : ''}>
+                        <span>${type}</span>
+                    </label>`;
+            });
+            container.innerHTML = html;
+            
+            container.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    if (e.target.value === '全部' && e.target.checked) {
+                        container.querySelectorAll('input:not([value="全部"])').forEach(cb => cb.checked = false);
+                    } else if (e.target.checked) {
+                        document.querySelector('#voiceTypeContainer input[value="全部"]').checked = false;
+                    }
+                });
+            });
+        }
+
+        function toggleAll(type, check) {
+            document.querySelectorAll(`input[name="cb_${type}"]`).forEach(cb => cb.checked = check);
+            confirmFilter(type); 
+        }
+        
+        function toggleAllComplex(type, check) {
+            // Special handling for '全部' in voice types
+            if (type === 'voiceType') {
+                if (check) { 
+                    document.querySelector('#voiceTypeContainer input[value="全部"]').checked = true;
+                    document.querySelectorAll('#voiceTypeContainer input:not([value="全部"])').forEach(cb => cb.checked = false);
+                } else { 
+                    document.querySelector('#voiceTypeContainer input[value="全部"]').checked = false;
+                }
+            }
+        }
+
+
+        function confirmFilter(type) {
+            const inputs = document.querySelectorAll(`input[name="cb_${type}"]:checked`);
+            state[type + 's'] = Array.from(inputs).map(cb => cb.value);
+            
+            const el = document.getElementById(type + 'Trigger');
+            const total = document.querySelectorAll(`input[name="cb_${type}"]`).length;
+            const count = state[type + 's'].length;
+            
+            if (count === 0) el.innerText = '未选';
+            else if (count === total) el.innerText = '全部';
+            else el.innerText = `已选 ${count} 项`;
+            
+            toggleDropdown(type + 'Drop');
+            if (type !== 'stage') renderTable();
+        }
+
+        function confirmStage() {
+            confirmFilter('stage'); 
+            
+            let availableNodes = [];
+            if (state.stages.length === 0) {
+                availableNodes = [];
+            } else {
+                state.stages.forEach(s => {
+                    Object.entries(STAGE_NODE_MAP).forEach(([stageName, nodes]) => {
+                        if (s === stageName) { 
+                            availableNodes.push(...nodes);
+                        }
+                    });
+                });
+            }
+            availableNodes = [...new Set(availableNodes)]; 
+            
+            renderCheckboxGrid('nodeList', availableNodes, 'node', true); 
+            toggleAll('node', true); 
+            confirmFilter('node'); 
+        }
+
+        function confirmComplex() {
+            // Get selected voice types
+            const voiceTypeInputs = document.querySelectorAll('#voiceTypeContainer input:checked');
+            state.voiceTypes = Array.from(voiceTypeInputs).map(i => i.value);
+
+            // Get keyword inputs
+            state.contentInclude = document.getElementById('contentIncludeInput').value.trim();
+            state.contentExclude = document.getElementById('contentExcludeInput').value.trim();
+
+            toggleDropdown('complexDrop');
+            renderTable();
+        }
+
+        function toggleDropdown(id) {
+            const el = document.getElementById(id);
+            const show = el.classList.contains('show');
+            document.querySelectorAll('.dropdown-panel').forEach(p => p.classList.remove('show'));
+            if (!show) el.classList.add('show');
+        }
+
+        // --- 5. 时间控件逻辑 ---
+        function switchTimeMode(mode) {
+            state.timeMode = mode;
+            document.querySelectorAll('.time-type-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(mode === 'day' ? 'btnDay' : 'btnMonth').classList.add('active');
+            
+            const startIn = document.getElementById('dateStart');
+            const endIn = document.getElementById('dateEnd');
+            
+            if(mode === 'day') {
+                startIn.type = 'date'; endIn.type = 'date';
+                startIn.value = '2024-11-01'; endIn.value = '2025-12-31';
+            } else {
+                startIn.type = 'month'; endIn.type = 'month';
+                startIn.value = '2024-11'; endIn.value = '2025-12';
+            }
+            renderTable();
+        }
+
+        // --- 6. 表格渲染 ---
+        function renderTable() {
+            // Get time range
+            state.startDate = document.getElementById('dateStart').value;
+            state.endDate = document.getElementById('dateEnd').value;
+            
+            // 1. Determine active data columns for display
+            const showAllVoices = state.voiceTypes.includes('全部');
+            const activeDataCols = []; // Stores the indices of data columns in the original `nums` array
+            const displayedColumnDefs = []; 
+
+            // Add fixed columns first
+            COLUMN_DEFS.slice(0, DATA_COL_START_INDEX).forEach(col => displayedColumnDefs.push(col));
+
+            // Add dynamic data columns
+            COLUMN_DEFS.slice(DATA_COL_START_INDEX).forEach((col, originalDataIndex) => {
+                if (col.type === 'base' || showAllVoices || state.voiceTypes.includes(col.type)) {
+                    displayedColumnDefs.push(col);
+                    activeDataCols.push(originalDataIndex);
+                }
+            });
+
+            // 2. Render table header
+            let theadHtml = '';
+            displayedColumnDefs.forEach(col => {
+                const stickyClass = col.fixed ? `sticky-col ${col.cls}` : '';
+                theadHtml += `<th class="${stickyClass} ${col.cls || ''}">${col.name}</th>`;
+            });
+            document.getElementById('tableHeaderRow').innerHTML = theadHtml;
+
+            // 3. Filter data
+            let filtered = MOCK_DATA.filter(row => {
+                // Brand-Model filter
+                if (!state.models.includes(row.model)) return false;
+                
+                // Stage filter 
+                let stageMatch = false;
+                for(let s of state.stages) {
+                    if(row.stage.includes(s)) { stageMatch = true; break; }
+                }
+                if(!stageMatch) return false;
+
+                // Node filter
+                if (!state.nodes.includes(row.node)) return false;
+
+                // Time filter
+                if (state.startDate && state.endDate) {
+                    let rowDate = row.date.replace(/\//g, '-');
+                    if (state.timeMode === 'month') rowDate = rowDate.substring(0, 7);
+                    if (rowDate < state.startDate || rowDate > state.endDate) return false;
+                }
+
+                // Content Include filter
+                if (state.contentInclude) {
+                    const terms = state.contentInclude.split('+').map(t => t.trim()).filter(Boolean);
+                    const orTerms = state.contentInclude.split('|').map(t => t.trim()).filter(Boolean);
+                    
+                    let includeMatch = false;
+                    if (terms.length > 0) { // AND logic
+                        includeMatch = terms.every(term => row.content.includes(term));
+                    } else if (orTerms.length > 0) { // OR logic
+                        includeMatch = orTerms.some(term => row.content.includes(term));
+                    } else {
+                        includeMatch = true;
+                    }
+                    if (!includeMatch) return false;
+                }
+
+                // Content Exclude filter
+                if (state.contentExclude) {
+                    const terms = state.contentExclude.split('+').map(t => t.trim()).filter(Boolean);
+                    const orTerms = state.contentExclude.split('|').map(t => t.trim()).filter(Boolean);
+
+                    let excludeMatch = false;
+                    if (terms.length > 0) { 
+                        excludeMatch = terms.every(term => row.content.includes(term));
+                    } else if (orTerms.length > 0) {
+                        excludeMatch = orTerms.some(term => row.content.includes(term));
+                    }
+                    if (excludeMatch) return false;
+                }
+                
+                return true;
+            });
+
+            const tbody = document.getElementById('tableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center; padding:20px;">暂无数据</td></tr>';
+                return;
+            }
+
+            // 4. Group by model and render rows with summary
+            let grouped = {};
+            state.models.forEach(m => grouped[m] = []);
+            filtered.forEach(row => {
+                if(grouped[row.model]) grouped[row.model].push(row);
+            });
+
+            let bodyHtml = '';
+            Object.keys(grouped).forEach(model => {
+                const rows = grouped[model];
+                if (rows.length === 0) return;
+
+                // Initialize sum for active data columns
+                let sumStats = new Array(COLUMN_DEFS.length - DATA_COL_START_INDEX).fill(0);
+
+                rows.forEach(row => {
+                    bodyHtml += `<tr>`;
+                    bodyHtml += `<td class="sticky-col col-model">${row.model}</td>`;
+                    bodyHtml += `<td class="sticky-col col-stage">${row.stage}</td>`;
+                    bodyHtml += `<td class="sticky-col col-node">${row.node}</td>`;
+                    bodyHtml += `<td class="sticky-col col-date">${row.date}</td>`;
+                    
+                    activeDataCols.forEach(dataIndex => {
+                        let val = row.nums[dataIndex] || 0;
+                        sumStats[dataIndex] += val; // Accumulate sum
+                        bodyHtml += `<td>${val.toLocaleString()}</td>`;
+                    });
+                    bodyHtml += `</tr>`;
+                });
+
+                // Render summary row (Yellow Row)
+                bodyHtml += `<tr class="summary-row">`;
+                bodyHtml += `<td class="sticky-col col-model">${model} 合计</td>`;
+                bodyHtml += `<td class="sticky-col col-stage">-</td>`;
+                bodyHtml += `<td class="sticky-col col-node">${rows.length} 条记录</td>`;
+                bodyHtml += `<td class="sticky-col col-date">-</td>`;
+                
+                activeDataCols.forEach(dataIndex => {
+                    bodyHtml += `<td>${sumStats[dataIndex].toLocaleString()}</td>`;
+                });
+                bodyHtml += `</tr>`;
+            });
+
+            tbody.innerHTML = bodyHtml;
+        }
+
+        // --- 7. Start ---
+        init();
+
+    </script>
+</body>
+</html>
